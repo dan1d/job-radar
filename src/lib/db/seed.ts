@@ -17,19 +17,17 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   blocked_locations: JSON.stringify(DEFAULT_BLOCKED_LOCATIONS),
 };
 
-export function seed(db: DB) {
-  // Seed settings (only missing keys — use onConflictDoNothing for concurrency safety)
+export async function seed(db: DB) {
   for (const [key, value] of Object.entries(DEFAULT_SETTINGS)) {
-    db.insert(schema.settings)
+    await db.insert(schema.settings)
       .values({ key, value })
       .onConflictDoNothing()
       .run();
   }
 
-  // Seed categories if empty (onConflictDoNothing handles race conditions)
   for (let i = 0; i < defaultCategories.length; i++) {
     const cat = defaultCategories[i];
-    db.insert(schema.categories)
+    await db.insert(schema.categories)
       .values({
         id: cat.id,
         label: cat.label,

@@ -20,7 +20,7 @@ function rowToJob(row: typeof manualJobs.$inferSelect): Job {
 }
 
 export async function GET() {
-  const rows = db.select().from(manualJobs).orderBy(desc(manualJobs.createdAt)).all();
+  const rows = await db.select().from(manualJobs).orderBy(desc(manualJobs.createdAt)).all();
   return NextResponse.json({ jobs: rows.map(rowToJob) });
 }
 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   const id = `manual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const pubDate = new Date().toISOString();
 
-  db.insert(manualJobs)
+  await db.insert(manualJobs)
     .values({
       id,
       title,
@@ -77,6 +77,6 @@ export async function DELETE(request: NextRequest) {
   if (!jobId) {
     return NextResponse.json({ error: "id required" }, { status: 400 });
   }
-  db.delete(manualJobs).where(eq(manualJobs.id, jobId)).run();
+  await db.delete(manualJobs).where(eq(manualJobs.id, jobId)).run();
   return NextResponse.json({ ok: true });
 }

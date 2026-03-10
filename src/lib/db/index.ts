@@ -1,23 +1,31 @@
 import "server-only";
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import path from "path";
 import * as schema from "./schema";
 import { seed } from "./seed";
 
-const DB_PATH = process.env.DB_PATH || path.join(process.cwd(), "job-radar.db");
+// Turso remote URL for production (Vercel), local file for dev
+const TURSO_URL = process.env.TURSO_DATABASE_URL;
+const TURSO_TOKEN = process.env.TURSO_AUTH_TOKEN;
+
+const localUrl = `file:${process.env.DB_PATH || path.join(process.cwd(), "job-radar.db")}`;
 
 const globalForDb = globalThis as unknown as {
   __db?: ReturnType<typeof createDb>;
+  __dbInitialized?: boolean;
 };
 
 function createDb() {
-  const sqlite = new Database(DB_PATH);
-  sqlite.pragma("journal_mode = WAL");
-  sqlite.pragma("busy_timeout = 10000");
-  sqlite.pragma("foreign_keys = ON");
+  const client = TURSO_URL
+    ? createClient({ url: TURSO_URL, authToken: TURSO_TOKEN })
+    : createClient({ url: localUrl });
 
-  // Create tables — idempotent, each statement is independent to minimize lock time
+  const db = drizzle(client, { schema });
+  return db;
+}
+
+async function initTables(db: ReturnType<typeof createDb>) {
   const tables = [
     `CREATE TABLE IF NOT EXISTS settings (
       key TEXT PRIMARY KEY,
@@ -55,18 +63,19 @@ function createDb() {
   ];
 
   for (const ddl of tables) {
-    try { sqlite.exec(ddl); } catch { /* another worker may hold the lock — tables are idempotent */ }
+    try { await db.run(ddl as any); } catch { /* idempotent */ }
   }
 
-  const db = drizzle(sqlite, { schema });
-
-  // Seed defaults — all use ON CONFLICT DO NOTHING, safe for concurrent workers
-  try { seed(db); } catch { /* race with another worker is fine */ }
-
-  return db;
+  try { await seed(db); } catch { /* race-safe */ }
 }
 
 export const db = globalForDb.__db ?? createDb();
+
+if (!globalForDb.__dbInitialized) {
+  globalForDb.__dbInitialized = true;
+  // Fire-and-forget init — tables created before first real query
+  initTables(db);
+}
 
 if (process.env.NODE_ENV !== "production") {
   globalForDb.__db = db;

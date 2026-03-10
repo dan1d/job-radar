@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { getSetting } from "@/lib/settings";
 
 export async function POST(request: NextRequest) {
-  const apiKey = getSetting("anthropic_api_key") || process.env.ANTHROPIC_API_KEY;
+  const apiKey = (await getSetting("anthropic_api_key")) || process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     return NextResponse.json(
       { error: "API key not configured. Set it at /admin/settings" },
@@ -11,8 +11,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const model = getSetting("ai_model") || "claude-sonnet-4-6";
-  const maxTokens = parseInt(getSetting("ai_max_tokens") || "500", 10);
+  const model = (await getSetting("ai_model")) || "claude-sonnet-4-6";
+  const maxTokens = parseInt((await getSetting("ai_max_tokens")) || "500", 10);
 
   const { jobTitle, jobDescription, template, instructions } =
     await request.json();

@@ -10,7 +10,7 @@ const ALLOWED_KEYS = new Set([
 ]);
 
 export async function GET() {
-  const all = getAllSettings();
+  const all = await getAllSettings();
   // Redact API key for display
   if (all.anthropic_api_key) {
     const key = all.anthropic_api_key;
@@ -32,6 +32,6 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: `Unknown setting: ${key}` }, { status: 400 });
   }
 
-  setSetting(key, value);
+  await setSetting(key, value);
   return NextResponse.json({ ok: true });
 }

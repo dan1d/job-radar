@@ -248,9 +248,9 @@ function himalayasToJob(item: HimalayasJob, categoryId: string): Job {
 
 // --- Location filter ---
 
-function getBlockedLocations(): Set<string> {
+async function getBlockedLocations(): Promise<Set<string>> {
   try {
-    const raw = getSetting("blocked_locations");
+    const raw = await getSetting("blocked_locations");
     const arr: string[] = raw ? JSON.parse(raw) : [];
     return new Set(arr.map((s) => s.toLowerCase().trim()));
   } catch {
@@ -258,11 +258,11 @@ function getBlockedLocations(): Set<string> {
   }
 }
 
-export function isLocationOpen(location: string, blocked?: Set<string>): boolean {
+export function isLocationOpen(location: string, blocked: Set<string> = new Set()): boolean {
   if (!location) return true;
   const loc = location.toLowerCase().trim();
   if (loc === "remote" || loc === "worldwide" || loc === "anywhere" || loc === "") return true;
-  const blockedSet = blocked ?? getBlockedLocations();
+  const blockedSet = blocked;
   if (blockedSet.has(loc)) return false;
   if (blockedSet.has(loc.replace(/^remote - /, ""))) return false;
   if (/\bus[a]?\b/.test(loc) && !loc.includes("worldwide")) return false;
@@ -276,8 +276,8 @@ export function isLocationOpen(location: string, blocked?: Set<string>): boolean
 
 // --- In-memory cache ---
 
-function getCacheTtl(): number {
-  return parseInt(getSetting("cache_ttl_ms") || "300000", 10);
+async function getCacheTtl(): Promise<number> {
+  return parseInt((await getSetting("cache_ttl_ms")) || "300000", 10);
 }
 
 interface CacheEntry<T> {
@@ -289,7 +289,7 @@ const sourceCache = new Map<string, CacheEntry<any>>();
 
 async function cachedFetch<T>(key: string, fetcher: () => Promise<T[]>): Promise<T[]> {
   const entry = sourceCache.get(key);
-  if (entry && Date.now() - entry.fetchedAt < getCacheTtl()) {
+  if (entry && Date.now() - entry.fetchedAt < (await getCacheTtl())) {
     return entry.data;
   }
   const data = await fetcher();
@@ -339,7 +339,7 @@ const seenIds = new Set<string>();
 export async function GET(request: NextRequest) {
   const categoryId = request.nextUrl.searchParams.get("category");
   const sourceFilter = request.nextUrl.searchParams.get("source");
-  const allCategories = getCategories();
+  const allCategories = await getCategories();
 
   const cats =
     categoryId && categoryId !== "all"
@@ -360,7 +360,7 @@ export async function GET(request: NextRequest) {
   );
 
   const allJobs: Job[] = [];
-  const blocked = getBlockedLocations();
+  const blocked = await getBlockedLocations();
 
   for (const cat of cats) {
     for (const [sourceKey, pipeline] of Object.entries(activeSources)) {

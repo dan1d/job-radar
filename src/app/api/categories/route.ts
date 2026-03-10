@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCategories, upsertCategory, deleteCategory } from "@/lib/store";
 
 export async function GET() {
-  return NextResponse.json(getCategories());
+  return NextResponse.json(await getCategories());
 }
 
 export async function POST(request: NextRequest) {
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
       { status: 400 }
     );
   }
-  const categories = upsertCategory({
+  const categories = await upsertCategory({
     id: body.id,
     label: body.label,
     query: body.query,
@@ -27,6 +27,6 @@ export async function DELETE(request: NextRequest) {
   if (!id) {
     return NextResponse.json({ error: "id is required" }, { status: 400 });
   }
-  const categories = deleteCategory(id);
+  const categories = await deleteCategory(id);
   return NextResponse.json(categories);
 }

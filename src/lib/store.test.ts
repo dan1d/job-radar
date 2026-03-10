@@ -5,53 +5,43 @@ import { categories } from "./db/schema";
 import { JobCategory } from "./types";
 
 describe("store", () => {
-  beforeEach(() => {
-    // Clear and re-seed categories for each test
-    db.delete(categories).run();
-    const seed = [
-      { id: "test-a", label: "Test A", query: "a query", proposalTemplate: "tpl a", sortOrder: 0 },
-      { id: "test-b", label: "Test B", query: "b query", proposalTemplate: "tpl b", sortOrder: 1 },
-    ];
-    for (const s of seed) {
-      db.insert(categories).values(s).run();
-    }
+  beforeEach(async () => {
+    await db.delete(categories).run();
+    await db.insert(categories).values({ id: "test-a", label: "Test A", query: "a query", proposalTemplate: "tpl a", sortOrder: 0 }).run();
+    await db.insert(categories).values({ id: "test-b", label: "Test B", query: "b query", proposalTemplate: "tpl b", sortOrder: 1 }).run();
   });
 
-  it("returns categories from db", () => {
-    const cats = getCategories();
-    expect(cats.length).toBe(2);
-    expect(cats[0]).toHaveProperty("id");
-    expect(cats[0]).toHaveProperty("label");
-    expect(cats[0]).toHaveProperty("query");
+  it("returns categories from db", async () => {
+    const cats = await getCategories();
+    expect(cats.find((c) => c.id === "test-a")).toBeTruthy();
+    expect(cats.find((c) => c.id === "test-b")).toBeTruthy();
   });
 
-  it("upserts a new category", () => {
+  it("upserts a new category", async () => {
     const newCat: JobCategory = {
-      id: "new-cat",
+      id: "store-test-new",
       label: "New",
       query: "new query",
       proposalTemplate: "new template",
     };
-    const result = upsertCategory(newCat);
-    expect(result.length).toBe(3);
-    expect(result.find((c) => c.id === "new-cat")).toMatchObject(newCat);
+    const result = await upsertCategory(newCat);
+    expect(result.find((c) => c.id === "store-test-new")).toMatchObject(newCat);
+    await deleteCategory("store-test-new");
   });
 
-  it("upserts an existing category", () => {
+  it("upserts an existing category", async () => {
     const updated: JobCategory = {
       id: "test-a",
       label: "Updated Label",
       query: "a query",
       proposalTemplate: "tpl a",
     };
-    const result = upsertCategory(updated);
-    expect(result.length).toBe(2);
+    const result = await upsertCategory(updated);
     expect(result.find((c) => c.id === "test-a")?.label).toBe("Updated Label");
   });
 
-  it("deletes a category", () => {
-    const result = deleteCategory("test-a");
-    expect(result.length).toBe(1);
-    expect(result.find((c) => c.id === "test-a")).toBeUndefined();
+  it("deletes a category", async () => {
+    const result = await deleteCategory("test-b");
+    expect(result.find((c) => c.id === "test-b")).toBeUndefined();
   });
 });

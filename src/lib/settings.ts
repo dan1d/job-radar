@@ -2,13 +2,13 @@ import { db } from "./db";
 import { settings } from "./db/schema";
 import { eq } from "drizzle-orm";
 
-export function getSetting(key: string): string | null {
-  const row = db.select().from(settings).where(eq(settings.key, key)).get();
+export async function getSetting(key: string): Promise<string | null> {
+  const row = await db.select().from(settings).where(eq(settings.key, key)).get();
   return row?.value ?? null;
 }
 
-export function setSetting(key: string, value: string): void {
-  db.insert(settings)
+export async function setSetting(key: string, value: string): Promise<void> {
+  await db.insert(settings)
     .values({ key, value, updatedAt: new Date().toISOString() })
     .onConflictDoUpdate({
       target: settings.key,
@@ -17,11 +17,11 @@ export function setSetting(key: string, value: string): void {
     .run();
 }
 
-export function getAllSettings(): Record<string, string> {
-  const rows = db.select().from(settings).all();
+export async function getAllSettings(): Promise<Record<string, string>> {
+  const rows = await db.select().from(settings).all();
   return Object.fromEntries(rows.map((r) => [r.key, r.value]));
 }
 
-export function getSettingOrDefault(key: string, fallback: string): string {
-  return getSetting(key) ?? fallback;
+export async function getSettingOrDefault(key: string, fallback: string): Promise<string> {
+  return (await getSetting(key)) ?? fallback;
 }

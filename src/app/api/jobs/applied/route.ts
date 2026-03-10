@@ -4,7 +4,7 @@ import { appliedJobs } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 
 export async function GET() {
-  const entries = db.select().from(appliedJobs).all();
+  const entries = await db.select().from(appliedJobs).all();
   return NextResponse.json(entries);
 }
 
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "jobId required" }, { status: 400 });
   }
 
-  db.insert(appliedJobs)
+  await db.insert(appliedJobs)
     .values({
       jobId,
       jobTitle: jobTitle || "",
@@ -33,6 +33,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "jobId required" }, { status: 400 });
   }
 
-  db.delete(appliedJobs).where(eq(appliedJobs.jobId, jobId)).run();
+  await db.delete(appliedJobs).where(eq(appliedJobs.jobId, jobId)).run();
   return NextResponse.json({ ok: true });
 }
